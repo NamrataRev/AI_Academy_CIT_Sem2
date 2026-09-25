@@ -8,218 +8,198 @@ By the end of this file you will be able to:
 
 - Name the four main ways an agent fails and explain what causes each one
 - Recognise which failure mode is happening when you see an agent behave unexpectedly
-- Describe what each failure looks like from the outside — what the user experiences
-- Apply practical fixes for each failure mode
+- Apply practical fixes for each failure mode before deploying an agent
 
 ---
 
-## Start Here — Agents Fail Differently From Regular AI
+## Before We Start 
 
-When a regular LLM call goes wrong, it is usually obvious. The answer is incorrect, or it hallucinates a fact, or it misunderstands the question. You read it, spot the problem, and try again.
+Here is a situation.
 
-Agents fail in more subtle and more expensive ways. Because an agent runs a loop — sometimes ten, twenty, or more iterations — a small problem early in the loop can silently snowball. By the time the agent produces a final answer, you may not even realise something went wrong along the way.
+You build an agent to help students prepare for technical interviews. It searches for common questions on a given topic, finds explanations, and summarises them. You test it. Works great. You share it with your study group.
 
-Worse, every loop iteration costs money. An agent stuck in a bad loop can burn through API budget before anyone notices.
+Two days later a friend tells you he studied recursion using the agent's summary — which confidently explained tail recursion using completely wrong examples. He used that explanation in a mock interview. It did not go well.
 
-This is why understanding failure modes before you build agents is not optional — it is the difference between an agent that is useful in production and one that is a liability.
+You check the agent logs. The search tool had returned no useful results for that query. Instead of saying "I could not find good material on this" — the agent generated an explanation from its own knowledge, presented it as if it came from the search, and your friend trusted it.
 
-There are four failure modes every agent builder needs to know.
+The agent never looked broken. It gave a clean, confident answer. There was no error message, no warning. Just quietly wrong information treated as fact.
+
+This is the real danger with agents. A wrong answer from a regular AI model is usually easy to spot and retry. A failing agent can quietly cause problems without anyone noticing. Understanding these four failure modes before you build is what keeps your agents safe to use.
 
 ---
 
-## Failure Mode 1 — Hallucinated Tool Calls
+## Failure 1 — The Agent Invents a Tool (Hallucinated Tool Call)
 
-### What it is
+### Picture This
 
-The agent calls a tool that does not exist, calls a real tool with made-up inputs, or reports that it called a tool when it actually did not.
+You build an agent to help students find the best Python library for a project. You give it a `search_web` tool.
 
-### Why it happens
+A student asks: "What is the most actively maintained library for sending emails in Python?"
 
-The language model is very good at generating plausible-sounding text. When it cannot figure out what tool to use — or when the tool it wants does not exist — it sometimes generates a tool call that looks correct but is not. It is doing what language models always do: producing the most plausible next token. The fact that the tool call is fictional does not stop the model from generating it confidently.
-
-### What it looks like
-
-The agent produces an observation that seems too convenient — exactly the right information, with no noise, formatted perfectly. Or the framework throws an error saying the tool does not exist. Or the agent references information in its reasoning that no tool actually returned.
-
-### A concrete example
-
-An agent is asked to check flight prices. It has a `search_web` tool but not a dedicated flight API. It generates:
+The agent thinks: "I should check the latest GitHub commit dates for the top email libraries." Good idea — but you never gave it a GitHub tool. So instead of saying "I don't have a tool to check GitHub activity" — it invents one:
 
 ```
-Action: check_flight_prices
-Action Input: {"from": "Chennai", "to": "Mumbai", "date": "2025-10-15"}
-Observation: "Chennai to Mumbai on Oct 15 — ₹4,200 (IndiGo, 6am)"
+Action: check_github_activity
+Action Input: {"library": "smtplib", "library2": "yagmail", "library3": "sendgrid"}
+Observation: "smtplib: last commit 3 days ago. yagmail: last commit 2 weeks ago. sendgrid: last commit yesterday."
 ```
 
-The `check_flight_prices` tool does not exist. The agent invented both the tool call and the result. The user receives a specific price that came from nowhere.
+That tool does not exist. The agent made it up. The commit data is also made up. The student picks a library based on information that came from nowhere.
 
-### How to fix it
+### Why Does This Happen?
 
-- Define tools precisely and give the agent an explicit list of what is available
-- Instruct the agent that if no tool fits, it should say so rather than invent one
-- Validate every observation — if the framework did not actually call a tool, the observation should not exist
-- Log all tool calls and cross-check them against the list of registered tools
+Language models are built to produce the most plausible next response. When the agent realises it needs something it does not have, it does not stop — it generates what a tool call and a result would look like, because that is what should come next in the pattern. It is not lying deliberately. It has no guardrail telling it to stop.
 
----
+### How to Prevent It
 
-## Failure Mode 2 — Infinite Loop
-
-### What it is
-
-The agent keeps calling tools over and over without making meaningful progress toward an answer. It never decides the task is complete.
-
-### Why it happens
-
-Three common causes:
-
-**The agent does not have enough information to proceed** — every search comes back with results that do not answer the question, so the agent keeps searching with slightly different queries, hoping for a better result.
-
-**The termination condition is unclear** — the agent was not told clearly enough what "done" looks like, so it keeps gathering more information even when it already has enough.
-
-**The agent gets into a cycle** — one tool's output triggers another call which triggers another call which circles back to the first.
-
-### What it looks like
-
-The agent runs for a very long time and produces no final answer. Costs accumulate. Or it eventually hits a maximum iteration limit and stops with a partial or empty response.
-
-### A concrete example
-
-An agent is asked: "Find me research papers on transformer models published this year."
-
-It searches, finds papers, but is not sure if it has found enough. It searches again with a different query. Finds more. Still not sure. Searches again. The task never specified how many papers were "enough," so the agent has no way to decide it is done.
-
-After 25 iterations it hits the maximum limit and returns an incomplete list with no explanation.
-
-### How to fix it
-
-- Always set a maximum number of iterations — treat this as non-negotiable
-- Be explicit in the task description about when the agent should stop: "find 5 papers and then answer" not "find research papers"
-- Add a reasoning check: if the agent's last three thoughts are nearly identical, it is stuck — force a stop
-- After each iteration, compare what the agent knows now to what it knew before — if nothing changed, it is looping
+- Give the agent an explicit list of available tools — only these, nothing else
+- Add to the system prompt: "If no available tool can help with a step, say so clearly. Do not use tools that are not in your list"
+- Validate every tool call — if the agent called something that is not registered, flag it before the result is used
 
 ---
 
-## Failure Mode 3 — Scope Creep
+## Failure 2 — The Agent Never Stops (Infinite Loop)
 
-### What it is
+### Picture This
 
-The agent does much more than was asked. It follows interesting tangents, gathers information it was not asked for, takes actions beyond the scope of the task, and produces a sprawling answer that addresses questions the user never had.
+A student asks an agent: "Find me beginner-friendly resources to learn dynamic programming."
 
-### Why it happens
+The agent searches. Finds some articles and videos. But it is not sure if they are beginner-friendly enough. So it searches again with slightly different terms. Finds more. Still not confident about the quality. Searches again. And again.
 
-The agent's reasoning stage is supposed to keep it focused. But if the task description is broad or if the agent's instructions do not clearly define boundaries, the reasoning stage generates increasingly ambitious plans. "While I am at it, I should also check..." is scope creep in action.
+Nobody told the agent how many resources were "enough." Nobody told it what "beginner-friendly" means in a measurable way. So it keeps going — spending money on API calls, filling up its context window — until it either crashes with a confusing error or the student closes the tab out of frustration.
 
-### What it looks like
+Nothing useful came out. Every iteration had a cost.
 
-The agent takes a very long time. It calls many tools. The final answer contains far more than was asked — multiple sections, unsolicited recommendations, related information the user did not request. It may even have taken actions (sent emails, modified files) that were never authorised.
+### Why Does This Happen?
 
-### A concrete example
+The task had no defined ending. "Find beginner-friendly resources" — how many? By what standard is one resource more beginner-friendly than another? The agent cannot answer these questions from the task description alone, so it can never decide it is done. It is not broken — it is following instructions that have no finish line.
 
-A user asks: "Check if our API endpoint is returning status 200."
+### How to Prevent It
 
-The agent checks the endpoint. Finds it returns 200. But then thinks: "While I am here, I should also check response time. And validate the response schema. And check the error endpoint too. And check if the authentication token is about to expire."
-
-Twenty minutes later the user gets a full API health report when they just wanted a yes or no.
-
-### How to fix it
-
-- Be specific in the task description — "check endpoint X and return whether it is 200 or not, nothing else"
-- Explicitly list what the agent should not do as well as what it should do
-- Set a tool call budget — if the agent has used more than N tools, it should stop and report what it has
-- Review the agent's reasoning logs — scope creep is visible in the thought stage before the action is taken
+- **Always set a maximum number of iterations** — this is non-negotiable. Ten is a reasonable ceiling for most tasks. Think of it as a circuit breaker — no matter what else goes wrong, the loop stops here
+- Make the stopping condition explicit in the task: "Find 5 beginner-friendly resources and summarise them" not "find resources"
+- If the agent's reasoning in the last two iterations is nearly identical, it is stuck — force a stop and return what it has
 
 ---
 
-## Failure Mode 4 — Silent Failure
+## Failure 3 — The Agent Does Way Too Much (Scope Creep)
 
-### What it is
+### Picture This
 
-The agent encounters an error, cannot complete the task, or produces a wrong result — but presents it confidently as if everything went fine. The user has no idea something went wrong.
+A student asks an agent: "Explain what a hash table is in simple terms."
 
-### Why it happens
+Simple. Should be a one-step answer.
 
-Language models are trained to be helpful and to produce complete-sounding responses. When a tool call fails or returns an unexpected result, the model may fill in the gap from its training data — producing an answer that sounds correct but has no grounding in what the tools actually returned. This is the most dangerous failure mode because it is the hardest to detect.
+Instead the agent thinks: "I should explain hash tables. But to really understand hash tables, they need to know about arrays first. And time complexity. And collision resolution strategies. And when to use a hash table versus a tree. And here are five practice problems to try."
 
-### What it looks like
+Ten minutes later the student gets a comprehensive data structures tutorial when they just wanted a quick explanation before their next class.
 
-The agent produces a confident, well-formatted final answer. Nothing looks wrong. But the answer contains information that no tool actually returned — it was generated from the model's training data to fill a gap. The user acts on this information without knowing it is unverified.
+This version of scope creep is just annoying. But imagine the agent also had the ability to send resources to the student's email or create calendar reminders. Scope creep with action tools means the agent starts doing things you never asked it to do — and you might not even realise it happened.
 
-### A concrete example
+### Why Does This Happen?
 
-An agent is asked to check whether a specific regulation applies to a company's product. The `search_web` tool returns no relevant results — the regulation is too niche and recent to appear in search results.
+The task description had no boundaries. The agent was told what to do but not where to stop. A language model trying to be helpful naturally extends — that is often good in a conversation, but in an agent it becomes a problem when there are no guardrails.
 
-Instead of saying "I could not find information about this regulation," the agent fills in from training data:
+### How to Prevent It
+
+- Be specific: "Explain what a hash table is in 3-4 sentences for someone who knows what an array is. Nothing else"
+- Explicitly say what to skip: "Do not include practice problems, comparisons with other data structures, or implementation details"
+- Set a word or tool call limit — if the response is longer than N words or the agent has made more than N tool calls, stop and return what exists
+
+---
+
+## Failure 4 — The Agent Hides That It Failed (Silent Failure)
+
+### Picture This
+
+Back to the opening story — this is the most dangerous failure because you have no way to know it happened.
+
+The agent is asked to summarise explanations of recursion from reliable sources. The search tool returns results — but they are all unrelated or low quality. The agent cannot find what it needs.
+
+Instead of saying "I could not find good explanations for this" — it generates one:
 
 ```
-"Based on the regulatory framework, this product is likely exempt 
-from the requirement under Section 4(b) of the Act."
+"Recursion is when a function calls itself. The base case is the 
+condition where the function stops calling itself. For example, 
+calculating factorial: factorial(n) = n × factorial(n-1), 
+with factorial(0) = 1 as the base case."
+
+Sources: geeksforgeeks.org, medium.com, stackoverflow.com
 ```
 
-This sounds authoritative. The company acts on it. The regulation actually does apply.
+The explanation might even be correct. But it did not come from those sources. The agent generated it from its training data and attached plausible-looking citations. The student has no way to know this.
 
-### How to fix it
+Now scale this up: the agent is explaining a concept incorrectly, or explaining something specific to a different programming language, or giving advice that only applies in certain edge cases — and the student trusts it completely because it looks like it came from verified sources.
 
-- Instruct the agent explicitly: if a tool returns no useful result, say so in the final answer — do not fill in from general knowledge
-- Require the agent to cite the specific tool and observation that supports each claim in its final answer
-- Build output validation — if the final answer contains claims that do not trace to any observation, flag it
-- Design the system prompt to treat "I could not find this" as an acceptable and correct answer
+### Why Does This Happen?
 
----
+Language models are built to be helpful. "I could not find this" feels like a failure. So the model fills the gap with what a good answer would look like — the same way it generates any text. It is not trying to deceive anyone. Nobody told it that honestly reporting a failure is also a valid and sometimes better response.
 
-## The Four Failure Modes — Quick Reference
+### How to Prevent It
 
-| Failure mode | What happens | Main cause | Key fix |
-|---|---|---|---|
-| **Hallucinated tool call** | Agent invents a tool or a result | Model generates plausible text even when no real tool fits | Define tools precisely; validate all observations |
-| **Infinite loop** | Agent never decides it is done | Unclear termination condition; no progress check | Set max iterations; define "done" explicitly |
-| **Scope creep** | Agent does far more than asked | Broad task description; no boundaries set | Be specific; list what not to do; set tool budgets |
-| **Silent failure** | Agent fills gaps with training data and presents it as fact | Model trained to be helpful; fills gaps naturally | Require citations; make "I don't know" an acceptable answer |
+- Add to the system prompt: "If a search returns no useful results, say so clearly. Do not generate information that did not come from a tool result"
+- Require real citations — not just plausible-looking source names, but the actual text that was retrieved
+- For anything the student will act on — studying for an exam, making a decision, writing code — add a note that the agent should flag when it is uncertain about a source
 
 ---
 
-## How These Failures Connect
+## All Four Together — Same Task, Four Ways to Fail
 
-Notice that all four failure modes have the same root cause: **the agent does not have clear enough instructions about what to do in an uncertain situation.**
+Task: "Help me understand binary search and find two good practice problems."
 
-- Hallucinated tool call: "I need a tool but don't have one — I'll invent it"
-- Infinite loop: "I don't know when to stop — I'll keep going"
-- Scope creep: "I don't know where the boundaries are — I'll keep expanding"
-- Silent failure: "I don't have the information — I'll fill it in"
+| Failure mode | What the agent does | What the student gets |
+|---|---|---|
+| **Hallucinated tool call** | Invents a `get_leetcode_problems` tool, fabricates problem names and difficulty | "Easy problem: Binary Search on Array (LeetCode #704)" — problem exists but was never actually fetched |
+| **Infinite loop** | Keeps searching for "the best" explanation, never satisfied with what it finds | Nothing — times out after 20 searches |
+| **Scope creep** | Explains binary search, then search variants, then sorting (because you need sorted arrays), then time complexity analysis, then 10 practice problems | A full DSA lesson when you needed a quick explanation |
+| **Silent failure** | Search tool fails silently, agent writes an explanation from training data with made-up source links | Confident explanation with fake citations — may be right or may be wrong, no way to tell |
 
-In every case, the agent is trying to be helpful in an uncertain situation, and doing the wrong thing because it was not told what the right thing is.
+---
 
-This is the most important design lesson in this file: **agent failures are almost always design failures.** The agent behaved exactly as a language model would behave given the instructions it had. The fix is almost never "use a smarter model" — it is "write clearer instructions and add the right guardrails."
+## The One Thing Behind All Four
+
+Every failure comes from the same place: **the agent hit an uncertain situation and had no instruction for what to do.**
+
+- No tool for the job → invents one
+- No clear stopping point → keeps going
+- No defined boundary → does everything
+- Tool returned nothing useful → fills in from training data
+
+The fix is not a smarter or more expensive model. The fix is thinking through every uncertain situation your agent might hit — and writing a clear instruction for each one.
+
+**Agents are only as good as the instructions behind them.**
 
 ---
 
 ## Best Practices
 
-- Log every tool call and every observation — if you cannot see what the agent did, you cannot fix what went wrong
-- Test each failure mode deliberately before deploying — give the agent a task where no tool will help and see if it hallucinates; give it a task with no clear stopping condition and see if it loops
-- Build failure handling into the agent's instructions, not as an afterthought — tell the agent what to do when tools fail, when results are unclear, and when it is not sure
+- Always set a maximum iteration limit — no exceptions, even for simple agents
+- Log every tool call and every observation — you cannot debug what you cannot see
+- Test failure modes deliberately before releasing — give the agent a task where no tool will help and watch what it does
+- Make "I could not find this" an acceptable and rewarded answer — not just a fallback
 
 ## Common Beginner Mistakes
 
-- **Assuming the agent will say it failed** — by default, language models avoid saying they could not do something. Silent failure is the default, not the exception. You have to explicitly instruct the agent to say when it is stuck or when information is missing
-- **Not setting a maximum iteration limit** — this is the single most common mistake with new agents. Always set one. It is your safety net for every other failure mode
-- **Blaming the model when the instructions are the real problem** — if your agent keeps failing, read the reasoning logs before you switch to a different model. Nine times out of ten the instructions are the issue, not the model's capability
+- **Assuming the agent will report when it fails** — it will not, by default. You have to explicitly instruct it to say when it is stuck or when information is missing
+- **Not setting a maximum iteration limit** — the single most common mistake. Always set one
+- **Switching to a more expensive model when the instructions are the real problem** — read the reasoning logs first. Nine times out of ten, unclear instructions are the cause, not the model's capability
 
 ---
 
 ## Key Takeaways
 
-- Agents fail in four main ways: hallucinated tool calls, infinite loops, scope creep, and silent failures
-- All four failure modes trace back to the same root cause — unclear instructions about what to do in uncertain situations
-- Silent failure is the most dangerous because the agent presents wrong information confidently — the user has no signal that something went wrong
-- Every deployed agent needs a maximum iteration limit — no exceptions
-- Agent failures are almost always design failures — the fix is clearer instructions and better guardrails, not a smarter model
+- Agents fail in four main ways: **hallucinated tool calls** (inventing tools or results), **infinite loops** (never deciding to stop), **scope creep** (doing far more than asked), and **silent failures** (hiding errors with confident-sounding answers)
+- All four come from the same root — the agent hit an uncertain situation with no instruction for what to do
+- Silent failure is the most dangerous because there is no signal to the user that anything went wrong
+- The fix is almost never a smarter model — it is clearer instructions, explicit limits, and the right guardrails
+- Every deployed agent must have a maximum iteration limit — treat this as non-negotiable
 
-> **Interview tip:** If asked "what can go wrong with an AI agent?" — name all four failure modes, give one concrete example of each, and explain the common root cause. Then say how you would prevent them: clear task descriptions, maximum iteration limits, explicit termination conditions, and output validation that requires every claim to trace to a real observation. Most people answer this question with "the AI can hallucinate." Naming four distinct failure modes — each with a different cause and a different fix — shows you have actually thought about deploying agents, not just reading about them.
+> **Interview tip:** If asked "what can go wrong with an AI agent?" — name all four failure modes with a quick example of each, then give the common root cause. Most people say "the AI might hallucinate." Naming four distinct failure modes — each with a different cause and a different fix — shows you understand what it actually takes to deploy agents safely.
 
 ---
 
 ## Reference Links
 
 - 📎 [Building Effective Agents — Anthropic Research](https://www.anthropic.com/research/building-effective-agents)
-- 📎 [Evaluating AI Agents — Common Failure Patterns](https://www.anthropic.com/research/evaluating-ai-systems)
 - 📎 [LangChain — Agent Debugging Guide](https://python.langchain.com/docs/how_to/debugging/)
+- 📎 [ReAct Paper — Section 4: Failure Analysis](https://arxiv.org/abs/2210.03629)
