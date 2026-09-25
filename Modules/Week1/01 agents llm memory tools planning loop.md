@@ -1,213 +1,252 @@
 # Agents — LLM + Memory + Tools + Planning Loop
 
+---
+
 ## Learning Objectives
 
 By the end of this file you will be able to:
 
-- Define what an AI agent is in precise technical terms
-- Identify the four components every agent has and explain what each one does
-- Trace the planning loop from input to action to observation to next decision
-- Explain how an agent differs from a single LLM call and from a fixed pipeline
-- Recognise agents you have already encountered in Semester 1
+- Explain what an AI agent is and how it is different from a regular AI chat
+- Name the four things every agent is made of and say what each one does
+- Trace what happens inside an agent from the moment it gets a task to the moment it finishes
+- Explain why some tasks need an agent and others do not
 
 ---
 
-## What You Already Know
+## What Problem Are We Solving?
 
-In Semester 1 you used Claude to answer questions, generate code, and process structured data. Every one of those interactions followed the same shape: you wrote a prompt, Claude produced a response, you read it and decided what to do next.
+Imagine you ask an AI model this:
 
-You were the agent. You were the one reading the output, deciding if it was good enough, and choosing the next step. Claude was a very capable tool — but it was not making decisions about what to do next. You were.
+> "My flight to Delhi is tomorrow morning at 6am. What time should I leave home if I live in Koramangala, Bangalore?"
 
-An AI agent changes this. It takes the decision-making loop — read output, evaluate, decide next step — and runs it inside the system itself, without waiting for you to intervene at each step.
+A smart model will give you a reasonable answer — something like "leave by 3am to be safe." But here is the problem: **it is guessing.** It does not know current traffic conditions. It does not know if there is a bandh tomorrow. It does not know if your specific terminal is domestic or international. It is producing a plausible answer from training data, not from real information.
 
----
+Now imagine a system that actually:
 
-## The Definition
+1. Looks up tomorrow's traffic from Koramangala to Kempegowda Airport on a live map
+2. Checks which terminal IndiGo flights depart from
+3. Reads the airport's recommendation for domestic check-in time
+4. Adds everything up and gives you a specific, verified answer
 
-An AI agent is a system that:
-
-1. Receives a goal or task (not just a single question)
-2. Breaks the task into steps
-3. Executes each step using available tools
-4. Observes the result of each step
-5. Decides what to do next based on what it observed
-6. Repeats until the task is complete or it determines it cannot proceed
-
-The key word is **decides**. An agent does not follow a fixed script. It makes choices at runtime based on what it finds.
+That second system is an **agent**. The difference is not that the agent is smarter. The difference is that the agent can **go and get real information** and **take real actions** — instead of generating a plausible-sounding answer from memory.
 
 ---
 
-## The Four Components
+## What an Agent Actually Is
 
-Every agent — regardless of how it is built or what framework it uses — has four components. Understanding these components is more important than understanding any specific tool or library, because they are what make something an agent rather than a pipeline.
+Here is the simplest definition:
 
-### 1. The LLM (Language Model)
+> **An agent is an AI system that can use tools to take actions in the world, and decides for itself what actions to take — step by step — until a task is complete.**
 
-The LLM is the reasoning engine. It reads the current situation — the goal, the conversation so far, the results of previous tool calls — and decides what to do next.
+Every AI model you have used so far works like this: you ask, it answers, done. One round. One shot.
 
-In practice this is Claude, GPT-4, Gemini, or another foundation model. The LLM does not execute code. It does not call APIs. It does not write to databases. It reasons and produces text — and that text is interpreted as an instruction to do something.
+An agent works like this: you give it a goal, and it figures out the steps. It might need to search for something first. Then read what it found. Then calculate something. Then check one more thing. It keeps going — deciding at each step what to do next — until the job is done.
 
-**What it does:** reads the current state and produces a decision about the next action.
+The key word is **decides**. The agent is not following a script you wrote. It is figuring out the script as it goes.
 
-**What it cannot do:** act on the world directly. It can only produce text that describes an action.
+---
 
-### 2. Memory
+## The Four Things Every Agent Is Made Of
 
-Memory is how the agent keeps track of what has happened. Without memory, every step the agent takes is effectively its first — it has no context about what it already tried, what worked, or what failed.
+No matter what tool, framework, or language model is used to build an agent — every agent has exactly four components. Learn these and you can understand any agent you encounter.
+
+### 1. The Language Model — The Brain
+
+The language model is the part that **thinks and decides**. It reads the situation — what is the task, what has happened so far, what tools are available — and decides what to do next.
+
+It does not search the web. It does not run code. It does not call APIs. It **only produces text** that describes what should happen next. Something else — the agent framework — reads that text and actually does the thing.
+
+Think of it like a manager who gives instructions but does not do the physical work themselves.
+
+### 2. Memory — The Notepad
+
+Every time the agent does something — searches for information, runs a calculation, calls a service — it needs to remember the result. Otherwise the next step has no idea what happened in the previous one.
 
 There are two kinds of memory:
 
-**In-context memory** is everything currently in the LLM's context window — the original task, the conversation history, the results of every tool call made so far. It is fast and immediately accessible, but it is limited by the context window size and it disappears when the conversation ends.
+**In-context memory** is like RAM — fast, immediately available, but limited and temporary. Everything in the current conversation is in-context memory. Once the session ends, it is gone.
 
-**External memory** is stored outside the context window — in a database, a vector store, or a file. The agent retrieves what it needs when it needs it. This allows memory to persist across sessions and scale beyond what fits in a context window.
+**External memory** is like a hard drive — slower to access, but it can store much more and it persists. This could be a database, a file, or a vector store. The agent retrieves what it needs when it needs it.
 
-In Semester 1, when you built RAG pipelines, you were building a form of external memory — the vector database stored knowledge the LLM could retrieve at query time. That same principle applies inside an agent.
+Most simple agents only use in-context memory. More sophisticated agents combine both.
 
-**What it does:** gives the agent continuity — the ability to know what it already tried and what it already knows.
+### 3. Tools — The Hands
 
-### 3. Tools
+Tools are the only way an agent can do anything beyond generating text.
 
-Tools are functions the agent can call to interact with the world. They are the only way an agent can do anything beyond generating text.
+A tool is a function that the agent can call. Each tool has:
+- A **name** — how the agent refers to it
+- A **description** — what it does, written in plain English so the language model can understand when to use it
+- A **schema** — what inputs it expects and what it returns
 
-A tool is defined by:
-- A name (what the agent calls it by)
-- A description (what it does — written in natural language, because the LLM reads this to decide when to use it)
-- A schema (what inputs it expects and what it returns)
+Here are some typical tools:
 
-Examples of tools:
-
-| Tool name | What it does |
+| Tool | What it does |
 |---|---|
-| `search_web` | Takes a query string, returns search results |
-| `read_file` | Takes a file path, returns the file contents |
-| `query_database` | Takes a SQL query, returns rows |
-| `call_api` | Takes a URL and parameters, returns the API response |
-| `write_file` | Takes a path and content, writes to disk |
-| `run_python` | Takes a code string, executes it, returns stdout |
+| `search_web` | Searches the internet and returns results |
+| `read_file` | Opens a file and returns its contents |
+| `run_code` | Executes code and returns the output |
+| `call_api` | Makes an HTTP request and returns the response |
+| `send_email` | Sends an email to a specified address |
+| `query_database` | Runs a database query and returns matching rows |
 
-When the LLM decides to use a tool, it produces structured output naming the tool and providing the inputs. The agent framework intercepts this, calls the actual function, and returns the result to the LLM as the next input.
+The language model reads the tool descriptions and decides which tool to use. It then produces a structured instruction — "call this tool with these inputs." The framework picks that up and runs the actual function. The result comes back. The agent reads it and decides what to do next.
 
-**What it does:** gives the agent the ability to act — to retrieve information, to write data, to call services, to execute code.
+### 4. The Planning Loop — The Cycle
 
-**What it does not do:** decide when or how to use them. That is the LLM's job.
+This is the engine that ties everything together.
 
-### 4. The Planning Loop
-
-The planning loop is what turns the other three components into an agent. It is the cycle that runs repeatedly until the task is done.
-
-```
-RECEIVE TASK
-      ↓
-LLM reads current state (task + memory + tool results so far)
-      ↓
-LLM produces next action (use a tool / produce final answer)
-      ↓
-      ├── If action = use a tool:
-      │       Call the tool
-      │       Observe the result
-      │       Add result to memory
-      │       Return to top of loop
-      │
-      └── If action = final answer:
-              Return the answer
-              End the loop
+```mermaid
+flowchart TD
+    A[Task received] --> B[Read current state\nWhat do I know? What have I done so far?]
+    B --> C{What should I do next?}
+    C -->|Use a tool| D[Call the tool with specific inputs]
+    D --> E[Get the result back]
+    E --> F[Save result to memory]
+    F --> B
+    C -->|I have enough to answer| G[Produce the final answer]
+    G --> H[Done]
 ```
 
-This loop is what makes an agent different from a single LLM call. A single LLM call runs once and returns. An agent runs the loop as many times as needed — using each tool result to inform the next decision.
+The loop runs over and over. Each time around:
+- The agent reads what it knows so far
+- Decides the next action
+- Takes that action
+- Stores the result
+- Goes around again
+
+It stops when the agent decides it has enough to give a final answer — or when it hits a maximum number of steps.
+
+This loop is what makes an agent different from a regular LLM call. A regular call happens once. An agent loops as many times as the task requires.
 
 ---
 
-## A Concrete Example
+## Worked Example — Flight Check-In Time
 
-Suppose you give an agent this task:
+Let us trace through the airport example step by step.
 
-> "Find out what the current interest rate set by the Reserve Bank of India is, then calculate how much interest would accrue on a ₹10,00,000 loan over 3 years at that rate."
+**Task given to the agent:**
+> "My IndiGo flight to Delhi is tomorrow at 6am from Bangalore. I live in Koramangala. What time should I leave home?"
 
-A single LLM call cannot reliably do this. The LLM's training data has a cutoff — it may not know the current rate. And even if it guesses, it cannot verify.
+The agent has three tools: `search_web`, `get_live_traffic`, and `calculate`.
 
-An agent with a `search_web` tool and a `calculate` tool handles it like this:
+---
+
+**Loop — Round 1**
+
+The agent reads the task and thinks: *"I need to know which terminal IndiGo uses at Kempegowda Airport."*
 
 ```
-Task received: "Find current RBI rate and calculate interest on ₹10L over 3 years"
-
-Loop iteration 1:
-  LLM decision: I need the current rate. I will search for it.
-  Tool call: search_web("RBI repo rate 2025")
-  Result: "The RBI repo rate as of September 2025 is 6.5%"
-  Memory updated.
-
-Loop iteration 2:
-  LLM decision: I have the rate. Now I will calculate.
-  Tool call: calculate("10_00_000 * 0.065 * 3")
-  Result: "195000"
-  Memory updated.
-
-Loop iteration 3:
-  LLM decision: I have everything I need.
-  Final answer: "The current RBI repo rate is 6.5%. Interest on ₹10,00,000
-  over 3 years at this rate would be ₹1,95,000."
-  Loop ends.
+Tool called: search_web
+Input: "IndiGo terminal Kempegowda International Airport Bangalore"
+Result: "IndiGo operates from Terminal 2 at KIAL."
 ```
 
-Notice what happened: the LLM never produced the answer from memory. It searched for the current information, then calculated. The agent did something that a single LLM call cannot reliably do.
+Result saved to memory. Back to the top of the loop.
 
 ---
 
-## How This Differs from What You Built in Semester 1
+**Loop — Round 2**
 
-In Semester 1 you built:
+The agent reads the task + memory and thinks: *"I know the terminal. Now I need to know how long the drive takes tomorrow morning."*
 
-**Direct LLM calls** — one prompt in, one response out. You made the decisions about what to ask next.
+```
+Tool called: get_live_traffic
+Input: "Koramangala to KIAL Terminal 2, tomorrow 3am"
+Result: "Estimated travel time: 45 minutes with low early-morning traffic."
+```
 
-**RAG pipelines** — a fixed sequence: retrieve chunks from a vector database, inject them into a prompt, call the LLM, return the response. The sequence was always the same. There was no decision-making at runtime about which step to take next.
-
-An agent is different in one critical way: **the sequence of steps is not fixed**. The agent decides at runtime what to do based on what it finds. Some tasks need one tool call. Some need five. Some need the same tool called three times with different inputs. The agent figures this out as it goes.
-
-| | Semester 1 direct LLM call | Semester 1 RAG pipeline | Agent |
-|---|---|---|---|
-| Fixed sequence | Yes | Yes | No |
-| Uses tools | No | One (vector DB) | Many |
-| Decides next step | You do | Pre-defined | The LLM does |
-| Can adapt based on results | No | No | Yes |
-| Memory | Context only | Context + vector DB | Context + external |
+Result saved to memory. Back to the top of the loop.
 
 ---
 
-## Where Agents Appear in the Real World
+**Loop — Round 3**
 
-You have already encountered systems that behave like agents, even if they were not labelled as such:
+The agent reads everything and thinks: *"I have the terminal and the travel time. Now I need to calculate when to leave — the flight is at 6am, domestic check-in closes 45 minutes before departure, I need time to get through security."*
 
-- **GitHub Copilot** completing multi-file refactors — it reads a codebase, plans changes, and applies them across files
-- **Customer service bots** that look up your account, check order status, and process a refund — three separate tool calls in a single conversation
-- **AI coding assistants** that run your tests, read the error, fix the code, and run the tests again — the loop runs until the tests pass
-- **Claude's web search feature** — when Claude searches for current information, reads the results, and incorporates them into an answer, it is executing a minimal one-iteration planning loop
+```
+Tool called: calculate
+Input: "06:00 minus 45 minutes check-in buffer minus 45 minutes drive minus 15 minutes buffer"
+Result: "04:15"
+```
+
+Result saved to memory. Back to the top of the loop.
 
 ---
 
-## What This Module Covers
+**Loop — Round 4**
 
-This week covers the concepts and design decisions around agents. It does not build a full agent from scratch — that is a Year 2 skill, and for good reason. Building a production-grade agent requires handling:
+The agent reads everything and thinks: *"I have all the information I need. I can answer now."*
 
-- Tool call failures and retries
-- Infinite loops (the agent keeps calling tools without making progress)
-- Context overflow (the loop runs so long the context window fills up)
-- Cost management (each loop iteration is an API call with a cost)
-- Evaluation (how do you measure whether the agent completed the task correctly?)
+```
+Final answer:
+"Your IndiGo flight departs from Terminal 2 at KIAL. Based on current 
+traffic estimates, the drive from Koramangala takes around 45 minutes 
+at that hour. With the 45-minute domestic check-in cutoff and a small 
+buffer, you should leave home by 4:15am."
+```
 
-What this module does build: the ability to design an agent for a domain problem — to decide which tools it needs, what memory it should use, where the loop should terminate, and what the failure modes are. That design skill is what this semester is about.
+Loop ends.
+
+---
+
+This is what a single LLM call cannot do. A single call would estimate the travel time, guess the terminal, and produce a confident-sounding answer with no real information behind it. The agent checked, calculated, and answered from actual data.
+
+---
+
+## When Do You Need an Agent vs a Simple LLM Call?
+
+Not every task needs an agent. An agent adds complexity — more steps, more cost, more things that can go wrong. Use one only when the task actually requires it.
+
+| Use a simple LLM call when... | Use an agent when... |
+|---|---|
+| The answer exists in the model's training data | The answer requires current or external information |
+| One step is enough | The task requires multiple steps that depend on each other |
+| The steps are always the same | The steps depend on what is found along the way |
+| You need a fast, cheap response | Correctness matters more than speed |
+
+**Examples that do not need an agent:**
+- "Explain what recursion is" — training data is enough
+- "Summarise this paragraph I am pasting" — one step, no tools needed
+- "Write a SQL query that does X" — no external information required
+
+**Examples that need an agent:**
+- "Find the cheapest flight from Chennai to Mumbai this weekend" — requires live data
+- "Read this PDF, find all the dates mentioned, and add them to my calendar" — multiple steps, different tools
+- "Check if our API is returning correct responses and fix anything that is broken" — the steps depend on what the check finds
+
+---
+
+## Best Practices
+
+- Give the agent the **minimum tools it needs** — every extra tool is another way the agent can go wrong
+- Write tool descriptions **clearly and specifically** — the agent reads them to decide which tool to use; a vague description leads to wrong choices
+- Always define **when the task is done** — without a clear stopping condition an agent can keep looping indefinitely
+- Set a **maximum number of iterations** — a safety ceiling so the agent stops even if it gets stuck
+
+## Common Beginner Mistakes
+
+- **Thinking the model runs the tools** — it does not. The model produces text saying "call this tool with these inputs." The framework runs the actual function. The model only ever produces text.
+- **Using an agent for everything** — a simple LLM call is faster, cheaper, and easier to debug. Only reach for an agent when the task genuinely needs it.
+- **Giving the agent too many tools** — more tools means the agent spends more time deciding, makes more mistakes, and is harder to debug when something goes wrong.
+- **No maximum iterations** — without a ceiling, an agent that gets confused can run for a very long time and cost a lot of money before someone notices.
 
 ---
 
 ## Key Takeaways
 
-- An AI agent is a system that receives a goal, breaks it into steps, executes steps using tools, observes results, and decides what to do next — repeating until the task is complete
-- Every agent has four components: an LLM (reasoning), memory (continuity), tools (ability to act), and a planning loop (the cycle that ties them together)
-- The planning loop is what distinguishes an agent from a single LLM call or a fixed pipeline — the sequence of steps is decided at runtime, not predetermined
-- In Semester 1 you were the planning loop. An agent runs the loop itself
-- Full agent builds are a Year 2 skill. This module covers design decisions — what tools, what memory, where to terminate, what can go wrong
+- An agent is an AI system that can take actions using tools and decides for itself — step by step — what actions to take until a task is complete
+- Every agent has four components: a **language model** (decides what to do), **memory** (remembers what happened), **tools** (takes real actions), and a **planning loop** (the cycle that runs them)
+- The planning loop is what makes an agent different from a regular LLM call — it runs multiple times, using each result to decide the next step
+- The language model never runs tools directly — it produces instructions, the framework executes them
+- Not every task needs an agent — use one only when the task requires current information, multiple dependent steps, or decisions that depend on what is found
+
+> **Interview tip:** If asked "what is an AI agent?" — name the four components, describe the planning loop in one sentence, and give a concrete example of a task that needs an agent and why a regular LLM call would fail at it. Most people describe agents vaguely as "AI that can do things on its own." Naming the four components and explaining why the loop is necessary shows you actually understand the architecture.
 
 ---
 
-## What Is Next
+## Reference Links
 
-The next file covers the ReAct pattern — the specific structure most agents use to organise their reasoning. ReAct stands for Reason, Act, Observe — and it is the clearest way to understand what is happening inside the planning loop step by step.
+- 📎 [Building Effective Agents — Anthropic Research](https://www.anthropic.com/research/building-effective-agents)
+- 📎 [ReAct — Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629)
+- 📎 [LangChain — Agents Conceptual Guide](https://python.langchain.com/docs/concepts/agents/)
