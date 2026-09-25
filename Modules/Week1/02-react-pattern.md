@@ -13,7 +13,7 @@ By the end of this file you will be able to:
 
 ---
 
-## Start Here — Why Does the Agent Need a Pattern?
+## Why Does the Agent Need a Pattern?
 
 In the previous file you saw that an agent loops — it takes a step, observes the result, decides the next step, and keeps going. But here is a question: how does the agent decide what to do next?
 
