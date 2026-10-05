@@ -31,13 +31,41 @@ A regular AI responds. An agent decides — what to do next, what to look up, wh
 
 Every agent — no matter what it is built with — has exactly four parts working together.
 
-**The Brain** — This is the language model. It reads the situation and decides what to do next. That is all it does. It does not search anything, open anything, or run anything by itself. It only thinks and produces an instruction. Like a manager sitting at a desk who never leaves their chair — they just read reports and write instructions for others to carry out.
+### 1. The Language Model — The Brain
+This is the language model. It reads the situation and decides what to do next. That is all it does. It does not search anything, open anything, or run anything by itself. It only thinks and produces an instruction. Like a manager sitting at a desk who never leaves their chair — they just read reports and write instructions for others to carry out.
 
-**The Hands** — These are the tools. Searching the web, reading a file, running a calculation, calling an API. The brain tells the hands what to do. The hands actually do it and bring the result back. Without hands, the brain can only think but never act.
+### 2. Tools — The Hands
+These are the tools. Searching the web, reading a file, running a calculation, calling an API. The brain tells the hands what to do. The hands actually do it and bring the result back. Without hands, the brain can only think but never act.
 
-**The Notepad** — This is memory. Every time a tool returns a result, the agent writes it down. The next time it thinks, it reads the notepad first. Without a notepad, every step starts from scratch with no memory of what just happened — like waking up every few seconds with no idea where you are.
+### 3. Memory — The Notepad
+This is memory. Every time a tool returns a result, the agent writes it down. The next time it thinks, it reads the notepad first. Without a notepad, every step starts from scratch with no memory of what just happened — like waking up every few seconds with no idea where you are.
 
-**The Loop** — This is what ties everything together. The brain thinks → the hands act → the result goes on the notepad → the brain reads the notepad and thinks again. This cycle keeps going until the brain decides: *I have enough. I can answer now.*
+### 4. The Planning Loop — The Cycle
+This is the engine that ties everything together.
+
+```mermaid
+flowchart TD
+    A[Task received] --> B[Read current state\nWhat do I know? What have I done so far?]
+    B --> C{What should I do next?}
+    C -->|Use a tool| D[Call the tool with specific inputs]
+    D --> E[Get the result back]
+    E --> F[Save result to memory]
+    F --> B
+    C -->|I have enough to answer| G[Produce the final answer]
+    G --> H[Done]
+```
+
+The loop runs over and over. Each time around:
+- The agent reads what it knows so far
+- Decides the next action
+- Takes that action
+- Stores the result
+- Goes around again
+
+It stops when the agent decides it has enough to give a final answer — or when it hits a maximum number of steps.
+
+This loop is what makes an agent different from a regular LLM call. A regular call happens once. An agent loops as many times as the task requires.
+
 
 ---
 
