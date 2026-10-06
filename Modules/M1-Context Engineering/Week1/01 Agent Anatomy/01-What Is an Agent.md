@@ -112,4 +112,4 @@ An agent is not a smarter chatbot. It is a system with a brain that thinks, hand
 
 ## What Is Next
 
-The brain — the language model — is doing the thinking in every loop. But how exactly does it think before it acts? That structured way of reasoning has a name, and it is what separates agents that work reliably from ones that go wrong. That is what the next file covers.
+The brain — the language model — is doing the thinking in every loop. But how exactly does it think before it acts? That structured way of reasoning has a name, and it is what separates agents that work reliably from ones that go wrong. That is what the next topic covers.
