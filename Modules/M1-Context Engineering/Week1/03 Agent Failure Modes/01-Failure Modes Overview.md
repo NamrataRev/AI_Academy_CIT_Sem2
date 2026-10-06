@@ -71,4 +71,4 @@ The most dangerous failure is the last one. It is the one you are least likely t
 
 ## What Is Next
 
-The first failure — hallucinated tool calls — is where the agent invents tools and results that do not exist. The next file explains what causes it, what it looks like, and exactly how to prevent it.
+The first failure — hallucinated tool calls — is where the agent invents tools and results that do not exist. The next topic explains what causes it, what it looks like, and exactly how to prevent it.
