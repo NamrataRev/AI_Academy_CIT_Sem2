@@ -69,4 +69,4 @@ It is not lying deliberately. It has no concept of lying. It is doing what it wa
 
 ## What Is Next
 
-The second failure mode is the infinite loop — when the agent never decides the task is done and keeps running forever. The next file explains what causes it and how a simple ceiling prevents it.
+The second failure mode is the infinite loop — when the agent never decides the task is done and keeps running forever. The next topic explains what causes it and how a simple ceiling prevents it.
