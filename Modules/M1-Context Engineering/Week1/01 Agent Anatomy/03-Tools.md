@@ -88,4 +88,4 @@ Writing tool descriptions is one of the most important skills in agent design. T
 
 ## What Is Next
 
-Every time a tool runs, a result comes back. That result needs to go somewhere — somewhere the brain can read it in the next loop. That is memory. The next file covers how the agent holds on to everything it finds.
+Every time a tool runs, a result comes back. That result needs to go somewhere — somewhere the brain can read it in the next loop. That is memory. The next topic covers how the agent holds on to everything it finds.
