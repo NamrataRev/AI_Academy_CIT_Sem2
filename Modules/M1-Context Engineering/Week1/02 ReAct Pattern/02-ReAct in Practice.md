@@ -129,4 +129,4 @@ This Thought / Action / Observation structure is ReAct made visible. When an age
 
 ## What Is Next
 
-ReAct makes agents more reliable. But even well-structured agents fail in predictable ways. The next file gives you an overview of the four failure modes — what they are and why every agent builder needs to know them before deploying anything.
+ReAct makes agents more reliable. But even well-structured agents fail in predictable ways. The next topic gives you an overview of the four failure modes — what they are and why every agent builder needs to know them before deploying anything.
