@@ -103,4 +103,4 @@ Setting the ceiling — five loops, ten, twenty depending on the task — is one
 
 ## What Is Next
 
-The loop is the engine. But inside every loop, the brain follows a specific pattern for how it thinks before it acts. That pattern has a name — ReAct — and understanding it is what lets you build agents that make good decisions reliably. That is the next file.
+The loop is the engine. But inside every loop, the brain follows a specific pattern for how it thinks before it acts. That pattern has a name — ReAct — and understanding it is what lets you build agents that make good decisions reliably. That is the next topic.
