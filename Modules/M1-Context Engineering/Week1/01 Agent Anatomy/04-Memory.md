@@ -91,4 +91,4 @@ For an agent, this means the same searches run over and over. The goal is never 
 
 ## What Is Next
 
-You now have three of the four parts — the brain, the hands, and the notepad. The last part is what connects them into a working system. That is the planning loop, and that is what the next file covers.
+You now have three of the four parts — the brain, the hands, and the notepad. The last part is what connects them into a working system. That is the planning loop, and that is what the next topic covers.
