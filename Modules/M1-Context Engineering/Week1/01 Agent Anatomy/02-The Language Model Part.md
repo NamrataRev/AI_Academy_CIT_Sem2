@@ -83,4 +83,4 @@ The brain is not smarter. It is better connected.
 
 ## What Is Next
 
-The brain gives instructions. But what receives those instructions and actually does the work? The next file covers tools — the hands of the agent — and how a tool call actually works from instruction to result.
+The brain gives instructions. But what receives those instructions and actually does the work? The next topic covers tools — the hands of the agent — and how a tool call actually works from instruction to result.
