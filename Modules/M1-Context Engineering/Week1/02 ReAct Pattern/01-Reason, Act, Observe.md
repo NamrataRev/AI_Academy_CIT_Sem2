@@ -93,4 +93,4 @@ Notice Loop 2. The reason step recognised that searching was done — the next s
 
 ## What Is Next
 
-ReAct makes the brain more disciplined inside each loop. But even well-structured agents fail in predictable ways. The next file introduces failure modes — what they are, why they happen, and why you need to know them before you build anything.
+ReAct makes the brain more disciplined inside each loop. But even well-structured agents fail in predictable ways. The next topic introduces failure modes — what they are, why they happen, and why you need to know them before you build anything.
