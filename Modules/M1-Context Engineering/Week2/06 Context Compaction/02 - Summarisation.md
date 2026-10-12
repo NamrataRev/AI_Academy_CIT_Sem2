@@ -36,45 +36,76 @@ A good conversation summary has four parts:
 
 ## A Summarisation Example
 
-A student has been using the study assistant for thirty minutes. The conversation history is long — twelve exchanges about stacks and queues. Here is what the original history contains:
+Here is the sample conversation used throughout the compaction topics — six exchanges between a student and the study assistant:
 
 ```
-[Student asks what a stack is]
-[Assistant explains with analogy]
-[Student asks for another example]
-[Assistant gives browser back button example]
-[Student asks how stack differs from queue]
-[Assistant explains LIFO vs FIFO]
-[Student confused about FIFO]
-[Assistant gives ticket counter analogy]
-[Student gets it, asks about real-world uses]
-[Assistant gives three examples]
-[Student asks which to use when]
-[Assistant explains decision criteria]
+EXCHANGE 1
+Student: What is a stack?
+Assistant: Think of a stack like a pile of trays in a cafeteria — 
+you can only add to the top and take from the top. In code: LIFO, 
+last in first out. Used in: browser back button, undo functions, 
+function call tracking.
+
+EXCHANGE 2
+Student: Can you give me another example?
+Assistant: Think of a stack like a pile of books on your desk — 
+you place a new book on top and always pick up from the top. 
+The last book placed is the first one you pick up. Used in: 
+compiler syntax checking, expression evaluation.
+
+EXCHANGE 3
+Student: I find the physical object analogies much easier than 
+process analogies. The plate and book examples clicked immediately.
+Assistant: Noted — I will keep using physical object analogies 
+throughout our session.
+
+EXCHANGE 4
+Student: What is a queue?
+Assistant: Think of a queue like people waiting at a ticket counter — 
+first in line is served first. In code: FIFO, first in first out. 
+Used in: print spoolers, message delivery, CPU scheduling.
+
+EXCHANGE 5
+Student: What is the difference between a stack and a queue?
+Assistant: A stack is like a pile of books — last placed is first 
+picked up (LIFO). A queue is like a ticket counter line — first 
+in line is first served (FIFO). Use a stack when order needs to 
+be reversed. Use a queue when order needs to be preserved.
+
+EXCHANGE 6
+Student: Got it. Can we move to trees now?
+Assistant: Of course. A tree is like a family tree — one root at 
+the top, branches going down, each person (node) connected to 
+those below them (children). In code: hierarchical data structure 
+with one root node and child nodes. Used in: file systems, 
+HTML document structure, decision trees.
 ```
 
-Twelve exchanges. Long. Pushing the context window.
+Six exchanges. The conversation is now pushing the context window. Time to summarise.
 
-Here is the summary that replaces it:
+Here is the summary that replaces Exchanges 1-4 (the oldest four):
 
 ```
-CONVERSATION SUMMARY (replaces previous 12 exchanges):
+CONVERSATION SUMMARY (replaces Exchanges 1-4):
 
-Topics covered: Stacks (LIFO) and Queues (FIFO) — concepts, 
-analogies, real-world uses, and when to use each.
+Topics covered: Stacks (LIFO) — explained with cafeteria tray 
+analogy and book pile analogy. Queues (FIFO) — explained with 
+ticket counter analogy.
 
-What was established: Student now understands both structures. 
-Initial confusion about FIFO was resolved using the ticket counter 
-analogy. Student can distinguish when to use stack vs queue based 
-on whether order needs to be reversed or preserved.
+What was established: Student confirmed physical object analogies 
+work better than process analogies (Exchange 3). Both stack 
+analogies landed well. Student now understands stacks and queues 
+and can distinguish when to use each.
 
 Student's current position: Confident on stacks and queues. 
-Ready to move to trees.
+Has just started trees (Exchange 6).
 
-Coming next: Binary trees — structure, terminology, traversals.
+Coming next: Continuing with trees — structure, terminology, traversals.
 ```
 
-Four sentences. Twelve exchanges compressed to four sentences. Everything the model needs to continue the conversation effectively — nothing it does not need.
+Four exchanges compressed to one short paragraph. Exchanges 5 and 6 stay in full as the sliding window — the immediate thread the model needs to continue. Everything the model needs is preserved. The verbose back-and-forth is gone.
+
+This same conversation and these same exchange numbers are used in the remaining compaction topics — Selective Retention and Compaction in Practice.
 
 ---
 
